@@ -3,25 +3,35 @@ package arffConverter;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ArffConverter {
 
 	private File namesFile, dataFile;
+
+	public static final String attributeTag = "@attribute";
+	public static final String relationTag = "@relation";
+	public static final String dataTag = "@data";
 	
 	public ArffConverter(String[] args) {
-		if(loadFiles(args)) {
-			// TODO: This assumes .names and .data are in the same folder
-			// and we are putting the .arff there also.  Is this okay?
+		if (loadFiles(args)) {
 			try {
 				String namesPath = namesFile.getAbsolutePath();
-				
+
 				int pathLength = namesPath.split(Pattern.quote(File.separator)).length;
 
-				File arffFile = new File(namesFile.getParentFile().getAbsolutePath() + File.separator + namesPath.split(Pattern.quote(File.separator))[pathLength-1].split(Pattern.quote("."))[0] + ".arff");
+				String fileName = namesPath.split(Pattern.quote(File.separator))[pathLength - 1].split(Pattern.quote("."))[0];
 				
-				if(!arffFile.exists()) {
+				File arffFile = new File(namesFile.getParentFile().getAbsolutePath() + File.separator
+						+ fileName + ".arff");
+
+				if (!arffFile.exists()) {
 					arffFile.getParentFile().mkdirs();
 					arffFile.createNewFile();
 				}
@@ -31,39 +41,93 @@ public class ArffConverter {
 				String namesOut = "";
 				int i = 1;
 				String temp = "";
+
+				List<String> attributeLabels = null;
 				
-				while(scanner.hasNextLine()) {
+				while (scanner.hasNextLine()) {
 					String line = scanner.nextLine();
 
-					if(line.startsWith("" + i)) {
-						if(i == 1 + 1) { // Title
+					if (line.startsWith("" + i)) {
+						if (i == 1 + 1) { // Title
 							namesOut += temp;
 						} else if (i == 2 + 1) { // Sources
 							namesOut += temp;
 						} else if (i == 7 + 1) { // Attributes
-							namesOut += temp;
+							attributeLabels = Stream.of(temp.split("\n"))
+								.skip(1) // Ignore the Attribute Information definition
+								.map(s -> s.substring(1, s.length())) // Remove the % we added at the start
+								.map(String::trim)
+								.filter(s -> s.matches("\\d+.+")) // Only care about lines that start with a number
+								.map(s -> s.split("\\d+")[1].substring(1, s.split("\\d+")[1].length())) // Remove the numbering
+								.map(String::trim)
+								.collect(Collectors.toList());
 						}
 						i++;
 						temp = "";
 					}
 					temp += "% " + line + "\n";
-					
+
 				}
-				
+
 				scanner.close();
-				
+
 				PrintWriter writer = new PrintWriter(arffFile);
-				
-				writer.println(namesOut);
+
+				// Write Title & Sources
+				writer.print(namesOut);
+
+				// Write relation tag
+				writer.println(relationTag + " " + fileName + "\n");
 				
 				scanner = new Scanner(dataFile);
-				
-				writer.println("@Data");
-				
-				while(scanner.hasNextLine()) {
-					writer.println(scanner.nextLine());
+
+				String data = "";
+
+				// Use map for cheap single key storage
+				Map<String, Void> dataTypes = new HashMap<String, Void>();
+
+				// Read first line to determine attribute types
+				List<String> types = null;
+				if (scanner.hasNextLine()) {
+					data = scanner.nextLine() + "\n";
+					types = Stream.of(data.split(","))
+							.limit(data.split(",").length - 1)
+							.map(String::trim)
+							.map(Attribute::getType)
+							.collect(Collectors.toList());
+					
+					// Also use the class for first line
+					dataTypes.put(data.split(",")[data.split(",").length - 1].trim(), null);
 				}
-				
+
+				// Get all the data to copy over
+				while (scanner.hasNextLine()) {
+					String line = scanner.nextLine();
+					data += line + "\n";
+
+					// Keep track of possible classes, the last value in the
+					// line
+					dataTypes.put(data.split(",")[data.split(",").length - 1].trim(), null);
+				}
+
+				// Write the attribute definitions
+				for(int j = 0; j < types.size(); j++) {
+					writer.println(attributeTag + " " + attributeLabels.get(j) + " " + types.get(j));
+				}
+
+				// Write the classes to file
+				writer.println(attributeTag + " class {" + dataTypes
+						.keySet()
+						.stream()
+						.sorted()
+						.map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s) // If the attribute contains a space, use quotes
+						.collect(Collectors.joining(","))
+						+ "}\n");
+
+				// Write the data to the file
+				writer.println(dataTag);
+				writer.println(data);
+
 				writer.close();
 				scanner.close();
 			} catch (IOException e) {
@@ -74,33 +138,37 @@ public class ArffConverter {
 			System.exit(1);
 		}
 	}
-	
+
 	boolean loadFiles(String[] args) {
 		String namesPath;
 		String dataPath;
-		
-		if(args[0].contains(".names")) {
+
+		if (args[0].contains(".names")) {
 			namesPath = args[0];
-			if(args[1].contains(".data")) {
+			if (args[1].contains(".data")) {
 				dataPath = args[1];
-			} else return false;
-		} else if(args[0].contains(".data")) {
+			} else
+				return false;
+		} else if (args[0].contains(".data")) {
 			dataPath = args[0];
-			if(args[1].contains(".names")) {
+			if (args[1].contains(".names")) {
 				namesPath = args[1];
-			} else return false;
-		} else return false;
-		
+			} else
+				return false;
+		} else
+			return false;
+
 		namesFile = new File(namesPath);
 		dataFile = new File(dataPath);
-		
-		if(!namesFile.exists() || !dataFile.exists()) return false;
-		
+
+		if (!namesFile.exists() || !dataFile.exists())
+			return false;
+
 		return true;
 	}
-	
+
 	public static void main(String[] args) {
 		new ArffConverter(args);
 	}
-	
+
 }
