@@ -18,7 +18,7 @@ public class ArffConverter {
 	public static final String attributeTag = "@attribute";
 	public static final String relationTag = "@relation";
 	public static final String dataTag = "@data";
-	
+
 	public ArffConverter(String[] args) {
 		if (loadFiles(args)) {
 			try {
@@ -26,10 +26,12 @@ public class ArffConverter {
 
 				int pathLength = namesPath.split(Pattern.quote(File.separator)).length;
 
-				String fileName = namesPath.split(Pattern.quote(File.separator))[pathLength - 1].split(Pattern.quote("."))[0];
-				
-				File arffFile = new File(namesFile.getParentFile().getAbsolutePath() + File.separator
-						+ fileName + ".arff");
+				String fileName = namesPath.split(Pattern.quote(File.separator))[pathLength - 1].split(
+						Pattern.quote("."))[0];
+
+				File arffFile = new File(namesFile	.getParentFile()
+													.getAbsolutePath()
+						+ File.separator + fileName + ".arff");
 
 				if (!arffFile.exists()) {
 					arffFile.getParentFile().mkdirs();
@@ -43,7 +45,7 @@ public class ArffConverter {
 				String temp = "";
 
 				List<String> attributeLabels = null;
-				
+
 				// Read through .names
 				while (scanner.hasNextLine()) {
 					String line = scanner.nextLine();
@@ -55,14 +57,19 @@ public class ArffConverter {
 							namesOut += temp;
 						} else if (i == 7 + 1) { // Attributes
 							attributeLabels = Stream.of(temp.split("\n"))
-								.skip(1) // Ignore the Attribute Information definition
-								.map(s -> s.substring(1, s.length())) // Remove the % we added at the start
-								.map(String::trim)
-								.filter(s -> s.matches("\\d+.+")) // Only care about lines that start with a number
-								.map(s -> s.split("\\d+")[1].substring(1, s.split("\\d+")[1].length())) // Remove the numbering
-								.map(String::trim)
-								.map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s) // Put quotes around the label if necessary
-								.collect(Collectors.toList());
+													// Ignore the Attribute Information definition
+													.skip(1)
+													// Remove the % we added at the start
+													.map(s -> s.substring(1, s.length()))
+													.map(String::trim)
+													// Only care about lines that start with a number
+													.filter(s -> s.matches("\\d+.+"))
+													.map(s -> s.split("\\d+")[1].substring(1,
+															s.split("\\d+")[1].length())) // Remove the numbering
+													.map(String::trim)
+													// Put quotes around the label if necessary
+													.map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s)
+													.collect(Collectors.toList());
 						}
 						i++;
 						temp = "";
@@ -80,7 +87,7 @@ public class ArffConverter {
 
 				// Write relation tag
 				writer.println(relationTag + " " + fileName + "\n");
-				
+
 				scanner = new Scanner(dataFile);
 
 				String data = "";
@@ -93,11 +100,11 @@ public class ArffConverter {
 				if (scanner.hasNextLine()) {
 					data = scanner.nextLine() + "\n";
 					types = Stream.of(data.split(","))
-							.limit(data.split(",").length - 1)
-							.map(String::trim)
-							.map(Attribute::getType)
-							.collect(Collectors.toList());
-					
+								  .limit(data.split(",").length - 1)
+								  .map(String::trim)
+								  .map(Attribute::getType)
+								  .collect(Collectors.toList());
+
 					// Also use the class for first line
 					dataTypes.put(data.split(",")[data.split(",").length - 1].trim(), null);
 				}
@@ -109,23 +116,34 @@ public class ArffConverter {
 
 					// Keep track of possible classes, the last value in the
 					// line
-					if(!line.trim().equals("")) {
+					if (!line.trim()
+							 .equals("")) {
 						dataTypes.put(line.split(",")[line.split(",").length - 1].trim(), null);
 					}
 				}
 
+				// Check if the attributes weren't defined
+				if(attributeLabels.size() < types.size()) {
+					// If not, enumerate attributes
+					attributeLabels = Stream.iterate(0, k -> k + 1)
+											.limit(types.size())
+											.map(s -> "" + s)
+											.collect(Collectors.toList());
+				}
+				
 				// Write the attribute definitions
-				for(int j = 0; j < types.size(); j++) {
+				for (int j = 0; j < types.size(); j++) {
 					writer.println(attributeTag + " " + attributeLabels.get(j) + " " + types.get(j));
 				}
 
 				// Write the classes to file
-				writer.println(attributeTag + " class {" + dataTypes
-						.keySet()
-						.stream()
-						.sorted()
-						.map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s) // If the attribute contains a space, use quotes
-						.collect(Collectors.joining(","))
+				writer.println(attributeTag + " class {" + 
+						dataTypes.keySet()
+						  		 .stream()
+						  		 .sorted()
+						  		 // If the attribute contains a space, use quotes
+						  		 .map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s)
+						  		 .collect(Collectors.joining(","))
 						+ "}\n");
 
 				// Write the data to the file
@@ -151,22 +169,18 @@ public class ArffConverter {
 			namesPath = args[0];
 			if (args[1].contains(".data")) {
 				dataPath = args[1];
-			} else
-				return false;
+			} else return false;
 		} else if (args[0].contains(".data")) {
 			dataPath = args[0];
 			if (args[1].contains(".names")) {
 				namesPath = args[1];
-			} else
-				return false;
-		} else
-			return false;
+			} else return false;
+		} else return false;
 
 		namesFile = new File(namesPath);
 		dataFile = new File(dataPath);
 
-		if (!namesFile.exists() || !dataFile.exists())
-			return false;
+		if (!namesFile.exists() || !dataFile.exists()) return false;
 
 		return true;
 	}
