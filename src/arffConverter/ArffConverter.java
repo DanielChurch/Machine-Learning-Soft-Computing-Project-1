@@ -60,6 +60,7 @@ public class ArffConverter {
 								.filter(s -> s.matches("\\d+.+")) // Only care about lines that start with a number
 								.map(s -> s.split("\\d+")[1].substring(1, s.split("\\d+")[1].length())) // Remove the numbering
 								.map(String::trim)
+								.map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s) // Put quotes around the label if necessary
 								.collect(Collectors.toList());
 						}
 						i++;
