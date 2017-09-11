@@ -127,7 +127,7 @@ public class ArffConverter {
 
 				// Write the data to the file
 				writer.println(dataTag);
-				writer.println(data);
+				writer.print(data.trim());
 
 				writer.close();
 				scanner.close();
