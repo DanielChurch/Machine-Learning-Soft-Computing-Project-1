@@ -44,6 +44,7 @@ public class ArffConverter {
 
 				List<String> attributeLabels = null;
 				
+				// Read through .names
 				while (scanner.hasNextLine()) {
 					String line = scanner.nextLine();
 
@@ -108,7 +109,9 @@ public class ArffConverter {
 
 					// Keep track of possible classes, the last value in the
 					// line
-					dataTypes.put(data.split(",")[data.split(",").length - 1].trim(), null);
+					if(!line.trim().equals("")) {
+						dataTypes.put(line.split(",")[line.split(",").length - 1].trim(), null);
+					}
 				}
 
 				// Write the attribute definitions
