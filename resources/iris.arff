@@ -8,10 +8,10 @@
 % 
 @relation iris
 
-@attribute "sepal length in cm" NUMERIC
-@attribute "sepal width in cm" NUMERIC
-@attribute "petal length in cm" NUMERIC
-@attribute "petal width in cm" NUMERIC
+@attribute "sepal length in cm" numeric
+@attribute "sepal width in cm" numeric
+@attribute "petal length in cm" numeric
+@attribute "petal width in cm" numeric
 @attribute class {Iris-setosa,Iris-versicolor,Iris-virginica}
 
 @data
