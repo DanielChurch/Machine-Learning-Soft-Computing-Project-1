@@ -1,0 +1,8 @@
+*.classpath
+*.project
+.settings/org.eclipse.jdt.core.prefs
+*.class
+*.iml
+.idea/workspace.xml
+*.xml
+.idea/.name
