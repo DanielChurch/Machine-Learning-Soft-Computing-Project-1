@@ -25,12 +25,9 @@ public class ArffConverter {
 
                 int pathLength = namesPath.split(Pattern.quote(File.separator)).length;
 
-                String fileName = namesPath.split(Pattern.quote(File.separator))[pathLength - 1].split(
-                        Pattern.quote("."))[0];
+                String fileName = namesPath.split(Pattern.quote(File.separator))[pathLength - 1].split(Pattern.quote("."))[0];
 
-                File arffFile = new File(namesFile.getParentFile()
-                        .getAbsolutePath()
-                        + File.separator + fileName + ".arff");
+                File arffFile = new File(namesFile.getParentFile().getAbsolutePath() + File.separator + fileName + ".arff");
 
                 if (!arffFile.exists()) {
                     arffFile.getParentFile().mkdirs();
