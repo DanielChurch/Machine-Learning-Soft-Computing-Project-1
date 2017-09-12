@@ -2,8 +2,8 @@ package arffConverter;
 
 public class Attribute {
 
-    public static final String numericTag = "NUMERIC";
-    public static final String stringTag = "NUMERIC";
+    public static final String numericTag = "numeric";
+    public static final String stringTag = "string";
 
     public static String getType(String data) {
         try {

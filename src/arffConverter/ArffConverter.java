@@ -189,8 +189,8 @@ public class ArffConverter {
         writer.println(relationTag + " " + fileName + "\n");
 
         // Write the attribute definitions
-        for (int j = 0; j < types.size(); j++) {
-            writer.println(attributeTag + " " + attributeLabels.get(j) + " " + types.get(j));
+        for (int i = 0; i < types.size(); i++) {
+            writer.println(attributeTag + " " + attributeLabels.get(i) + " " + types.get(i));
         }
 
         // Write the classes to file
