@@ -149,10 +149,6 @@ public class ArffConverter {
         }
     }
 
-    public static void main(String[] args) {
-        new ArffConverter(args);
-    }
-
     boolean loadFiles(String[] args) {
         String namesPath;
         String dataPath;
@@ -175,6 +171,10 @@ public class ArffConverter {
         if (!namesFile.exists() || !dataFile.exists()) return false;
 
         return true;
+    }
+
+    public static void main(String[] args) {
+        new ArffConverter(args);
     }
 
 }
