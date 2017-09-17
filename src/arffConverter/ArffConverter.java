@@ -25,10 +25,6 @@ public class ArffConverter {
         }
     }
 
-    public static void main(String[] args) {
-        new ArffConverter(args);
-    }
-
     private boolean loadFiles(String[] args) {
         System.out.println("Loading Files...");
         String namesPath;
@@ -295,5 +291,9 @@ public class ArffConverter {
         System.out.println("ARFF conversion done! File written to: " + arffFile.getAbsolutePath());
 
         writer.close();
+    }
+
+    public static void main(String[] args) {
+        new ArffConverter(args);
     }
 }
