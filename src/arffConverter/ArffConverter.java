@@ -3,11 +3,7 @@ package arffConverter;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,7 +13,7 @@ public class ArffConverter {
     public static final String attributeTag = "@attribute";
     public static final String relationTag = "@relation";
     public static final String dataTag = "@data";
-    
+    int dataIndex = 0;
     private File namesFile, dataFile;
 
     public ArffConverter(String[] args) {
@@ -29,7 +25,12 @@ public class ArffConverter {
         }
     }
 
+    public static void main(String[] args) {
+        new ArffConverter(args);
+    }
+
     private boolean loadFiles(String[] args) {
+        System.out.println("Loading Files...");
         String namesPath;
         String dataPath;
 
@@ -50,6 +51,8 @@ public class ArffConverter {
 
         if (!namesFile.exists() || !dataFile.exists()) return false;
 
+        System.out.println("Files Found!");
+
         return true;
     }
 
@@ -61,7 +64,7 @@ public class ArffConverter {
             // Use map for cheap single key storage
             Map<String, Void> dataTypes = new HashMap<String, Void>();
             List<String> types = new ArrayList<String>();
-            
+
             String data = getDataTypes(types, dataTypes);
 
             // Check if the attributes weren't defined
@@ -72,13 +75,14 @@ public class ArffConverter {
             e.printStackTrace();
         }
     }
-    
+
     private String getHeaderData(List<String> attributeLabels) throws IOException {
+        System.out.println("Grabbing Header Data...");
         Scanner scanner = new Scanner(namesFile);
 
         int i = 1;
         String temp = "";
-        
+
         String namesOut = "";
 
         // Read through .names
@@ -109,36 +113,94 @@ public class ArffConverter {
 
         scanner.close();
 
+        System.out.println("Got Header Data!");
         return namesOut;
     }
-    
+
     private String getDataTypes(List<String> types, Map<String, Void> dataTypes) throws IOException {
+        System.out.println("Reading through the data...");
         Scanner scanner = new Scanner(dataFile);
 
         String data = "";
-        
+
         // Read first line to determine attribute types
         if (scanner.hasNextLine()) {
-            data = scanner.nextLine() + "\n";
-            types.addAll(Stream.of(data.split(","))
-                    .limit(data.split(",").length - 1)
-                    .map(String::trim)
-                    .map(Attribute::getType)
-                    .collect(Collectors.toList()));
+            String line = scanner.nextLine() + "\n";
 
-            // Also use the class for first line
-            dataTypes.put(data.split(",")[data.split(",").length - 1].trim(), null);
+            // Prefer getting class from last line
+            if (Attribute.getType(line.split(",")[line.split(",").length - 1].trim()) == Attribute.stringTag) {
+                // Also use the class for first line
+                dataTypes.put(line.split(",")[line.split(",").length - 1].trim(), null);
+
+                types.addAll(Stream.of(line.split(","))
+                        .limit(line.split(",").length - 1)
+                        .map(String::trim)
+                        .map(Attribute::getType)
+                        .collect(Collectors.toList()));
+
+                dataIndex = line.split(",").length - 1;
+            } else if (Attribute.getType(line.split(",")[0].trim()) == Attribute.stringTag) {
+                // Also use the class for first line
+                dataTypes.put(line.split(",")[0].trim(), null);
+
+                types.addAll(Stream.of(line.split(","))
+                        .skip(1)
+                        .limit(line.split(",").length)
+                        .map(String::trim)
+                        .map(Attribute::getType)
+                        .collect(Collectors.toList()));
+
+                dataIndex = 0;
+            } else {
+                System.err.println("We don't support your file, please select one that has the string class as the first or last parameter");
+                System.exit(1);
+            }
+
+            if (dataIndex == 0) {
+                System.out.println("Class attribute found at the start of the line.");
+                System.out.println("Attribute types found: class, " + types.stream().map(String::trim).collect(Collectors.joining(", ")));
+                String[] split = line.split(",");
+                String out = "";
+                for (int i = 0; i < split.length; i++) {
+                    if (i == 0)
+                        out += split[split.length - 1].trim() + ",";
+                    else if (i == split.length - 1) {
+                        out += split[0].trim() + ",";
+                    } else {
+                        out += split[i].trim() + ",";
+                    }
+                }
+                data += out.substring(0, out.length() - 1) + "\n";
+            } else {
+                System.out.println("Class attribute found at the end of the line.");
+                System.out.println("Attribute types found: " + types.stream().map(String::trim).collect(Collectors.joining(", ")) + ", class");
+                data += line + "\n";
+            }
         }
 
         // Get all the data to copy over
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
-            data += line + "\n";
 
-            // Keep track of possible classes, the last value in the
-            // line
+            if (dataIndex == 0) {
+                String[] split = line.split(",");
+                String out = "";
+                for (int i = 0; i < split.length; i++) {
+                    if (i == 0)
+                        out += split[split.length - 1] + ",";
+                    else if (i == split.length - 1) {
+                        out += split[0] + ",";
+                    } else {
+                        out += split[i] + ",";
+                    }
+                }
+                data += out.substring(0, out.length() - 1) + "\n";
+            } else {
+                data += line + "\n";
+            }
+
             if (!line.trim().equals("")) {
-                dataTypes.put(line.split(",")[line.split(",").length - 1].trim(), null);
+                dataTypes.put(line.split(",")[dataIndex].trim(), null);
             }
         }
 
@@ -148,17 +210,38 @@ public class ArffConverter {
     }
 
     private List<String> checkAttributes(List<String> attributeLabels, List<String> types) {
-    	if (attributeLabels.size() < types.size()) {
+
+        if (attributeLabels.size() < types.size()) {
+            System.out.println("There seems to be a problem with the attributes... Defaulting to enumeration");
             // If not, enumerate attributes
             attributeLabels = Stream.iterate(0, k -> k + 1)
                     .limit(types.size())
                     .map(s -> "" + s)
                     .collect(Collectors.toList());
+        } else {
+            System.out.println("Checking for any pesky duplicate labels...");
+
+            boolean changedLabel = false;
+            List<String> labels = new ArrayList<String>();
+            for (int i = 0; i < attributeLabels.size(); i++) {
+                if (labels.contains(attributeLabels.get(i))) {
+                    changedLabel = true;
+                    labels.add(attributeLabels.get(i) + "-");
+                } else {
+                    labels.add(attributeLabels.get(i));
+                }
+            }
+
+            if (changedLabel)
+                System.out.println("Pesky duplicate labels exterminated!");
+            else
+                System.out.println("No duplicate labels were found!");
+            attributeLabels = labels;
         }
-    	
-    	return attributeLabels;
+
+        return attributeLabels;
     }
-    
+
     private File createArffFile() throws IOException {
         String namesPath = namesFile.getAbsolutePath();
 
@@ -177,6 +260,7 @@ public class ArffConverter {
     }
 
     private void writeData(File arffFile, String namesOut, Map<String, Void> dataTypes, List<String> types, List<String> attributeLabels, String data) throws IOException {
+        System.out.println("Writing all the data to the file..");
         int pathLength = arffFile.getAbsolutePath().split(Pattern.quote(File.separator)).length;
         String fileName = arffFile.getAbsolutePath().split(Pattern.quote(File.separator))[pathLength - 1].split(Pattern.quote("."))[0];
 
@@ -200,16 +284,16 @@ public class ArffConverter {
                         .sorted()
                         .map(s -> s.matches(".+\\s+.+") ? '"' + s + '"' : s) // If the attribute contains a space, use quotes
                         .collect(Collectors.joining(","))
-                + "}\n");
+                + "}");
+
+        writer.println();
 
         // Write the data to the file
         writer.println(dataTag);
         writer.print(data.trim());
 
-        writer.close();
-    }
+        System.out.println("ARFF conversion done! File written to: " + arffFile.getAbsolutePath());
 
-    public static void main(String[] args) {
-        new ArffConverter(args);
+        writer.close();
     }
 }

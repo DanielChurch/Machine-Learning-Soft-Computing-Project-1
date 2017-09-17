@@ -6,3 +6,5 @@
 .idea/workspace.xml
 *.xml
 .idea/.name
+bin/META-INF/MANIFEST.MF
+src/META-INF/MANIFEST.MF
